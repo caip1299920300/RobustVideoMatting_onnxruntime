@@ -2,7 +2,6 @@
 #include "Transform.h"
 #include "Update_context.h"
 
-
 __global__ void process(unsigned char* srcData, const float* tgtData, const int h, const int w)
 {
     int ix = threadIdx.x + blockIdx.x * blockDim.x;
@@ -18,15 +17,15 @@ __global__ void process(unsigned char* srcData, const float* tgtData, const int 
     }
 }
 
-RVM::RVM(char* sModelPath) : session(env, sModelPath, session_options) 
+RVM::RVM(char* sModelPath) //: session(env, sModelPath, session_options) 
 {
-	session_options.SetIntraOpNumThreads(nThreadNum);
-	session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-
 	// 添加CUDAExecutionProvider到会话选项中
-	//Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options, 0));
-	
+	Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options, 0));   //CUDA加速开启
+	session_options.SetGraphOptimizationLevel(ORT_ENABLE_BASIC); //设置图优化类型
+	session_options.SetIntraOpNumThreads(nThreadNum); // 设置线程
+	session = new Ort::Session(env, sModelPath, session_options);    // 创建会话，把模型加载到内存
 	Ort::AllocatorWithDefaultOptions allocator;
+	
 }
 
 
@@ -48,11 +47,12 @@ void RVM::detect(unsigned char* aImg,unsigned char* aResultImg, int nWeigh, int 
 		dynamic_dsr_value_handler
 	);
 	// 前向推理
-	auto output_tensors = session.Run(Ort::RunOptions{ nullptr },
+	auto output_tensors = session->Run(Ort::RunOptions{ nullptr },
 		input_node_names.data(),
 		input_tensors.data(), num_inputs, output_node_names.data(),
 		num_outputs
 	);
+	
 	// 推理的结果解码
 	Ort::Value& fgr = output_tensors.at(0); // fgr (1,3,h,w) 0.~1.
 	Ort::Value& pha = output_tensors.at(1); // pha (1,1,h,w) 0.~1.
@@ -64,6 +64,8 @@ void RVM::detect(unsigned char* aImg,unsigned char* aResultImg, int nWeigh, int 
 	const unsigned int target_tensor_size = height * width;
 	
 	unsigned char* imgResult = new unsigned char[height * width*3];
+	
+	
 	
 	// 在GPU上执行背景黑化操作
 	float* dstDevData;
@@ -79,6 +81,8 @@ void RVM::detect(unsigned char* aImg,unsigned char* aResultImg, int nWeigh, int 
 	cudaDeviceSynchronize();  
 	cudaMemcpy(imgResult, srcDevData, sizeof(unsigned char) * target_tensor_size*3, cudaMemcpyDeviceToHost);
 	
+	cudaFree(srcDevData);
+	cudaFree(dstDevData);
 	
 	// 计算输出张量的大小
 	size_t nimg_size = sizeof(unsigned char) * height * width*3;

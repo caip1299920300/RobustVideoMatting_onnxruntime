@@ -18,9 +18,6 @@ using namespace Ort;
 class RVM
 {
 private:
-	/* 模型推理线程数 */
-	int nThreadNum = 8;
-
 	// 输入节点个数
 	unsigned int num_inputs = 6;
 	// 输入节点的名字
@@ -64,9 +61,13 @@ private:
 	// 是否更新循环记忆上下文、动态维度更新		
 	bool context_is_update = false;
 	// 设置为VERBOSE，方便控制台输出时看到是使用了cpu还是gpu执行
-	Ort::Env env{ ORT_LOGGING_LEVEL_VERBOSE, "Onnxruntime" };
-	Ort::SessionOptions session_options;
-	Ort::Session session{ nullptr };
+	//Ort::Env env{ ORT_LOGGING_LEVEL_VERBOSE, "Onnxruntime" };
+	//Ort::SessionOptions session_options;
+	//Ort::Session session{ nullptr };
+	
+	Ort::Env env = Env(ORT_LOGGING_LEVEL_ERROR, "NVM");
+	Ort::Session *session = nullptr;
+	Ort::SessionOptions session_options = Ort::SessionOptions();
 
 public:
 	/* 可调参数-下采样比率
@@ -77,6 +78,8 @@ public:
 		3840x2160	0.125	0.2
 	*/
 	float downsample_ratio = 0.375;
+	/* 模型推理线程数 */
+	int nThreadNum = 8;
 	/* 输入RGB或BGR的图片，返回对应的RGB或BGR背景图为黑色的图片aResultImg */
 	void detect(unsigned char* aImg,unsigned char* aResultImg, int nWeigh, int nHeight);
 

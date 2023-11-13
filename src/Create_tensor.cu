@@ -39,6 +39,9 @@ Ort::Value create_tensor(unsigned char* aImg,
 	process<<<gridSize, blockSize>>>(srcDevData, dstDevData, target_height, target_width);
 	cudaDeviceSynchronize();  
 	cudaMemcpy(tensor_value_handler.data(), dstDevData, sizeof(float) * target_tensor_size, cudaMemcpyDeviceToHost);
+	
+	cudaFree(srcDevData);
+	cudaFree(dstDevData);
 
 	return Ort::Value::CreateTensor<float>(memory_info_handler, tensor_value_handler.data(),
 		target_tensor_size, tensor_dims.data(),

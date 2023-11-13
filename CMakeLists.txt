@@ -42,6 +42,8 @@ add_compile_options(-Wall)
 set (LIBS pthread stdc++)
 set (LOCAL_LIBS 
 	onnxruntime
+	onnxruntime_providers_shared
+	onnxruntime_providers_cuda
  )
  
 cuda_add_executable(NVM ${SRC_LIST})
